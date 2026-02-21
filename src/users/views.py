@@ -1,18 +1,17 @@
+from django.contrib.auth import authenticate, login
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import permissions, status
+from foodbudget_core.views import BasePublicAPIView
+from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from users.models import User
-from users.serializers import RegisterSerializer
+from users.serializers import CredentialsSerializer
 
 
-class RegisterUserView(APIView):
-    permission_classes = [permissions.AllowAny]
-
+class RegisterUserView(BasePublicAPIView):
     @extend_schema(
         summary="Register new user",
-        request=RegisterSerializer,
+        request=CredentialsSerializer,
         responses={
             status.HTTP_201_CREATED: OpenApiResponse(description="Registered new user"),
             status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Invalid request"),
@@ -20,7 +19,7 @@ class RegisterUserView(APIView):
         },
     )
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        serializer = CredentialsSerializer(data=request.data)
 
         if not serializer.is_valid():
             return Response({"status": "error"}, status=400)
@@ -35,4 +34,29 @@ class RegisterUserView(APIView):
         user.set_password(password)
         user.save()
 
-        return Response({"status": "success", "email": user.email}, status=201)
+        return Response({"status": "success"}, status=201)
+
+
+class LoginUserView(BasePublicAPIView):
+    @extend_schema(
+        summary="Log in user",
+        request=CredentialsSerializer,
+        responses={
+            status.HTTP_200_OK: OpenApiResponse(description="Succesfully logged in user"),
+            status.HTTP_401_UNAUTHORIZED: OpenApiResponse(description="Unauthorized access"),
+            status.HTTP_400_BAD_REQUEST: OpenApiResponse(description="Invalid request"),
+        },
+    )
+    def post(self, request):
+        serializer = CredentialsSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response({"status": "error"}, status=400)
+
+        user = authenticate(request, email=serializer.validated_data["email"], password=serializer.validated_data["password"])
+
+        if user is not None:
+            login(request, user)
+            return Response({"status": "ok"}, status=200)
+
+        return Response({"status": "error"}, status=401)
