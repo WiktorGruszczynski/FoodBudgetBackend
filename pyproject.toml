@@ -7,7 +7,7 @@ src = ["src"]
 extend-exclude = ["*/migrations/*"]
 
 # Wersja Pythona
-target-version = "py311"
+target-version = "py313"
 
 # Długość linii (Django lubi nieco więcej niż standardowe 79/88)
 line-length = 100
