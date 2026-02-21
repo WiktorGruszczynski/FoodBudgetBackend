@@ -15,23 +15,22 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from django.contrib import admin
-from django.urls import path
-from drf_yasg import openapi
-from drf_yasg.views import get_schema_view
-from rest_framework import permissions
+from django.urls import include, path
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-schema_view = get_schema_view(
-    openapi.Info(
-        title='Food Budget API',
-        default_version='v1',
-        description='API documentation for the Food Budget application',
-    ),
-    public=True,
-    permission_classes=(permissions.AllowAny,),
-)
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+@extend_schema(exclude=True)
+class HiddenSpectacularAPIView(SpectacularAPIView):
+    pass
+
+
+base_urlpatterns = [
+    # Używamy ukrytego widoku zamiast standardowego
+    path("schema/", HiddenSpectacularAPIView.as_view(), name="schema"),
+    path("swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    # include app urls
+    path("", include("users.urls")),
 ]
+
+urlpatterns = [path("api/v1/", include(base_urlpatterns))]
