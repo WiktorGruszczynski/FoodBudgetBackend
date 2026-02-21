@@ -1,22 +1,29 @@
 [tool.ruff]
-
-# Folder z kodem źródłowym
-src = ["src"]
-
-# Wykluczenie folderu z migracjami
-extend-exclude = ["*/migrations/*"]
-
-# Wersja Pythona
 target-version = "py313"
-
-# Długość linii (Django lubi nieco więcej niż standardowe 79/88)
-line-length = 100
+line-length = 128
+indent-width = 4
 
 [tool.ruff.lint]
-
-# Wybór zestawu reguł (E - błędy, F - Pyflakes, I - sortowanie importów)
-select = ["E", "F", "I"]
-ignore = []
+ignore=[]
+select = [
+    "E",   # PEP8 errors (syntax, indentation)
+    "F",   # Pyflakes (dead code, unused imports)
+    "DJ",  # Django-specific
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+    "I",   # isort
+]
+fixable = ["ALL"]
+unfixable = []
+exclude = [
+    ".venv", 
+    "**/migrations/**", 
+    ".vscode"
+]
 
 [tool.ruff.format]
-quote-style = "single" # Django standardowo używa pojedynczych cudzysłowów
+exclude = [
+    ".venv",
+    "**/migrations/**",
+    ".vscode"
+]
