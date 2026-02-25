@@ -1,6 +1,9 @@
 import logging
 
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
+
+from products.models import Product
 
 logger = logging.getLogger(__name__)
 
@@ -8,8 +11,17 @@ logger = logging.getLogger(__name__)
 class ProductSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
 
-    name = serializers.CharField(max_length=128)
-    ean = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    name = serializers.CharField(
+        max_length=128,
+        validators=[UniqueValidator(queryset=Product.objects.all(), message="Product with this name already exists.")],
+    )
+
+    ean = serializers.CharField(
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        validators=[UniqueValidator(queryset=Product.objects.all(), message="Product with this ean already exists.")],
+    )
     manufacturer = serializers.CharField(required=False, max_length=128)
 
     issued_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
@@ -99,3 +111,6 @@ class ProductSerializer(serializers.Serializer):
             raise serializers.ValidationError(errors)
 
         return data
+
+    def create(self, validated_data):
+        return Product.objects.create(**validated_data)

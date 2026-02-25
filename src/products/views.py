@@ -16,6 +16,14 @@ class ProductViewSet(BaseAuthViewSet):
         if not serializer.is_valid():
             return Response({"error": serializer.errors}, status=400)
 
-        print(serializer.data)
+        product = serializer.save()
 
-        return Response({"status": "ok"})
+        return Response(
+            {
+                "product": {
+                    "id": product.id,
+                },
+                "message": f"Product [{product.name}] created successfully",
+            },
+            status=201,
+        )
