@@ -10,8 +10,17 @@ class ProductViewSet(BaseAuthViewSet):
     serializer_class = ProductSerializer
     lookup_field = "id"
 
+    def list(self, request):
+        queryset = self.get_queryset()
+        serializer = self.serializer_class(queryset, many=True)
+
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
     def create(self, request):
-        serializer = ProductSerializer(data=request.data, context={"request": request})
+        serializer = self.serializer_class(data=request.data, context={"request": request})
 
         if not serializer.is_valid():
             return Response({"error": serializer.errors}, status=400)
