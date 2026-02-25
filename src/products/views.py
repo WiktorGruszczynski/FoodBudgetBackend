@@ -1,1 +1,21 @@
-# Create your views here.
+from foodbudget_core.views import BaseAuthViewSet
+from rest_framework.response import Response
+
+from products.models import Product
+from products.serializers import ProductSerializer
+
+
+class ProductViewSet(BaseAuthViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    lookup_field = "id"
+
+    def create(self, request):
+        serializer = ProductSerializer(data=request.data, context={"request": request})
+
+        if not serializer.is_valid():
+            return Response({"error": serializer.errors}, status=400)
+
+        print(serializer.data)
+
+        return Response({"status": "ok"})

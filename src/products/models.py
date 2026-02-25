@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from django.conf import settings
@@ -8,7 +9,7 @@ class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=128, unique=True)
     ean = models.CharField(max_length=13, unique=True, null=True, blank=True)
-    producer = models.CharField(max_length=128)
+    manufacturer = models.CharField(max_length=128)
 
     issued_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="products")
 
@@ -29,4 +30,6 @@ class Product(models.Model):
     salt = models.FloatField()
 
     def __str__(self):
-        return f"Product<name={self.name}>"
+        data = {key: str(value) if key == "id" else value for key, value in self.__dict__.items() if not key.startswith("_")}
+
+        return json.dumps(data, indent=4, ensure_ascii=False)
