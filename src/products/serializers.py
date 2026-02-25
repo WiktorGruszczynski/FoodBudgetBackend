@@ -1,11 +1,11 @@
-import logging
-
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from products.models import Product
 
-logger = logging.getLogger(__name__)
+# const values below are in grams
+NUTRIENTS_LIQUID_LIMIT = 150
+NUTRIENTS_SOLID_LIMIT = 100
 
 
 class ProductSerializer(serializers.Serializer):
@@ -42,6 +42,9 @@ class ProductSerializer(serializers.Serializer):
     salt = serializers.FloatField()
 
     def validate_ean(self, value):
+        if value is not None and str(value).strip() == "":
+            return None
+
         if not value:
             return value
 
@@ -106,6 +109,19 @@ class ProductSerializer(serializers.Serializer):
 
         if sugars > carbohydrates:
             errors["carbohydrates"] = errors["sugars"] = "Sugar content cannot be greater than amount of carbohydrates"
+
+        # check total amount of nutrients
+        total_nutrients = fat + carbohydrates + (data.get("protein") or 0) + (data.get("fiber") or 0) + (data.get("salt") or 0)
+
+        # if liquid, nutrients limit is NUTRIENTS_LIQUID_LIMIT
+        # if solid, nutrients the limit is NUTRIENTS_SOLID_LIMIT
+        nutrients_limit = NUTRIENTS_LIQUID_LIMIT if volume > 0 else NUTRIENTS_SOLID_LIMIT
+
+        if total_nutrients > nutrients_limit:
+            errors["non_field_errors"] = (
+                f"Total nutrients ({total_nutrients}g) exceed the physical limit "
+                f"for a 100{'ml' if volume > 0 else 'g'} sample (limit: {nutrients_limit}g)."
+            )
 
         if errors:
             raise serializers.ValidationError(errors)

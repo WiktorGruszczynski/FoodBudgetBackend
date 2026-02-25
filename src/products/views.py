@@ -16,8 +16,8 @@ class ProductViewSet(BaseAuthViewSet):
 
         return Response(serializer.data)
 
-    def retrieve(self, request, *args, **kwargs):
-        return super().retrieve(request, *args, **kwargs)
+    def retrieve(self, request):
+        pass
 
     def create(self, request):
         serializer = self.serializer_class(data=request.data, context={"request": request})

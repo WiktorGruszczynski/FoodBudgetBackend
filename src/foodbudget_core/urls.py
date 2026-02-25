@@ -26,13 +26,14 @@ class HiddenSpectacularAPIView(SpectacularAPIView):
     pass
 
 
-base_urlpatterns = [
-    # Używamy ukrytego widoku zamiast standardowego
-    path("schema/", HiddenSpectacularAPIView.as_view(), name="schema"),
-    path("swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    # include app urls
+api_urlpatterns = [
     path("", include("users.urls")),
     path("", include("products.urls")),
 ]
 
-urlpatterns = [path("admin/", admin.site.urls), path("api/v1/", include(base_urlpatterns))]
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("schema/", HiddenSpectacularAPIView.as_view(), name="schema"),
+    path("swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/v1/", include(api_urlpatterns)),
+]
