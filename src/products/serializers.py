@@ -4,7 +4,7 @@ from rest_framework.validators import UniqueValidator
 from products.models import Product
 
 # const values below are in grams
-NUTRIENTS_LIQUID_LIMIT = 150
+NUTRIENTS_LIQUID_LIMIT = 140
 NUTRIENTS_SOLID_LIMIT = 100
 
 
