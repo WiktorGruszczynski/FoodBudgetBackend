@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from products.models import Product
+from products.models import Product, QuantityUnit
 
 # const values below are in grams
 NUTRIENTS_LIQUID_LIMIT = 140
@@ -26,8 +26,8 @@ class ProductSerializer(serializers.Serializer):
 
     issued_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
-    weight = serializers.IntegerField(required=False, allow_null=True)
-    volume = serializers.IntegerField(required=False, allow_null=True)
+    quantity = serializers.DecimalField(max_digits=10, decimal_places=2, required=True, coerce_to_string=False)
+    quantity_unit = serializers.ChoiceField(choices=QuantityUnit.choices, required=True)
 
     energy = serializers.DecimalField(max_digits=8, decimal_places=2, coerce_to_string=False)
 
@@ -84,8 +84,7 @@ class ProductSerializer(serializers.Serializer):
             return 0
 
         numeric_fields = [
-            "weight",
-            "volume",
+            "quantity",
             "energy",
             "fat",
             "saturated_fat",
@@ -102,17 +101,10 @@ class ProductSerializer(serializers.Serializer):
             if get_field_value(field) < 0:
                 errors[field] = "Value cannot be negative"
 
-        # check weight and volume
-        weight = get_field_value("weight")
-        volume = get_field_value("volume")
+        unit = data.get("quantity_unit") or (getattr(instance, "quantity_unit") if instance else None)
 
-        # both null
-        if not weight and not volume:
-            errors["weight"] = errors["volume"] = "Provide weight or volume"
-
-        # both not null
-        if weight and volume:
-            errors["weight"] = errors["volume"] = "Cannot provide both weight and volume. Choose one"
+        if not unit:
+            errors["unit"] = "Missing measurment unit"
 
         # check macro nutrients
         # check fat
@@ -134,12 +126,13 @@ class ProductSerializer(serializers.Serializer):
 
         # if liquid, nutrients limit is NUTRIENTS_LIQUID_LIMIT
         # if solid, nutrients the limit is NUTRIENTS_SOLID_LIMIT
-        nutrients_limit = NUTRIENTS_LIQUID_LIMIT if volume > 0 else NUTRIENTS_SOLID_LIMIT
+        is_liquid = unit in [QuantityUnit.MILLILITER]
+        nutrients_limit = NUTRIENTS_LIQUID_LIMIT if is_liquid else NUTRIENTS_SOLID_LIMIT
 
         if total_nutrients > nutrients_limit:
             errors["non_field_errors"] = (
                 f"Total nutrients ({total_nutrients}g) exceed the physical limit "
-                f"for a 100{'ml' if volume > 0 else 'g'} sample (limit: {nutrients_limit}g)."
+                f"for a 100{unit} sample (limit: {nutrients_limit}g)."
             )
 
         if errors:
@@ -151,9 +144,13 @@ class ProductSerializer(serializers.Serializer):
         return Product.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
+        fields_to_update = []
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+            fields_to_update.append(attr)
 
-        instance.save()
+        if fields_to_update:
+            instance.save(update_fields=fields_to_update)
 
         return instance

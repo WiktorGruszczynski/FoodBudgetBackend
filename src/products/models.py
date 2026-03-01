@@ -5,6 +5,11 @@ from django.conf import settings
 from django.db import models
 
 
+class QuantityUnit(models.TextChoices):
+    GRAM = ("g",)
+    MILLILITER = "ml"
+
+
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=128, unique=True)
@@ -14,8 +19,8 @@ class Product(models.Model):
     issued_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="products")
 
     # uses either weight or volume
-    weight = models.IntegerField(null=True, blank=True)
-    volume = models.IntegerField(null=True, blank=True)
+    quantity = models.FloatField()
+    quantity_unit = models.CharField(max_length=8, choices=QuantityUnit.choices)
 
     # values below are in (grams) per 100g/100ml
 
