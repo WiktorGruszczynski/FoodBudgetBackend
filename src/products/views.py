@@ -2,10 +2,12 @@ from foodbudget_core.views import BaseAuthViewSet
 from rest_framework.response import Response
 
 from products.models import Product
+from products.permissions import IsProductOwnerOrReadOnly
 from products.serializers import ProductSerializer
 
 
 class ProductViewSet(BaseAuthViewSet):
+    permission_classes = BaseAuthViewSet.permission_classes + [IsProductOwnerOrReadOnly]
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     lookup_field = "id"
@@ -62,3 +64,12 @@ class ProductViewSet(BaseAuthViewSet):
             },
             status=200,
         )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        product_name = instance.name
+
+        instance.delete()
+
+        return Response({"message": f"Product [{product_name}] deleted successfully"}, status=200)
