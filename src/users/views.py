@@ -8,6 +8,7 @@ from users.models import User
 from users.serializers import CredentialsSerializer
 
 
+@extend_schema(tags=["Users"])
 class RegisterUserView(BasePublicAPIView):
     @extend_schema(
         summary="Register new user",
@@ -37,6 +38,7 @@ class RegisterUserView(BasePublicAPIView):
         return Response({"status": "success"}, status=201)
 
 
+@extend_schema(tags=["Users"])
 class LoginUserView(BasePublicAPIView):
     @extend_schema(
         summary="Log in user",
