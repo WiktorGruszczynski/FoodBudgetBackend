@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema
 from foodbudget_core.views import BaseAuthViewSet
 from rest_framework.response import Response
 
@@ -6,6 +7,7 @@ from products.permissions import IsProductOwnerOrReadOnly
 from products.serializers import ProductSerializer
 
 
+@extend_schema(tags=["Products"])
 class ProductViewSet(BaseAuthViewSet):
     permission_classes = BaseAuthViewSet.permission_classes + [IsProductOwnerOrReadOnly]
     queryset = Product.objects.all()
