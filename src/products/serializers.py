@@ -29,17 +29,23 @@ class ProductSerializer(serializers.Serializer):
     weight = serializers.IntegerField(required=False, allow_null=True)
     volume = serializers.IntegerField(required=False, allow_null=True)
 
-    energy = serializers.FloatField()
+    energy = serializers.DecimalField(max_digits=8, decimal_places=2, coerce_to_string=False)
 
-    fat = serializers.FloatField()
-    saturated_fat = serializers.FloatField()
+    fat = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False)
+    saturated_fat = serializers.DecimalField(
+        max_digits=6, decimal_places=2, coerce_to_string=False, allow_null=True, required=False
+    )
 
-    carbohydrates = serializers.FloatField()
-    sugars = serializers.FloatField()
+    carbohydrates = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False)
+    sugars = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False, allow_null=True, required=False)
 
-    fiber = serializers.FloatField()
-    protein = serializers.FloatField()
-    salt = serializers.FloatField()
+    fiber = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False)
+    protein = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False)
+    salt = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False, allow_null=True, required=False)
+
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+    last_synced_at = serializers.DateTimeField(read_only=True)
 
     def validate_ean(self, value):
         if value is not None and str(value).strip() == "":

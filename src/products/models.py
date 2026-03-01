@@ -29,6 +29,15 @@ class Product(models.Model):
     protein = models.FloatField()
     salt = models.FloatField()
 
+    # Automatycznie ustawia datę tylko raz, przy utworzeniu obiektu
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Automatycznie aktualizuje datę przy każdym wywołaniu .save()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Pole, które dodaliśmy wcześniej - sterowane ręcznie w funkcji scan
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
         data = {key: str(value) if key == "id" else value for key, value in self.__dict__.items() if not key.startswith("_")}
 
