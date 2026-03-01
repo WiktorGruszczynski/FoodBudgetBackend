@@ -65,6 +65,18 @@ class ProductSerializer(serializers.Serializer):
 
     def validate(self, data):
         errors = {}
+
+        instance = getattr(self, "instance", None)
+
+        def get_field_value(field_name):
+            if field_name in data:
+                return data.get(field_name) or 0
+
+            if instance:
+                return getattr(instance, field_name) or 0
+
+            return 0
+
         numeric_fields = [
             "weight",
             "volume",
@@ -80,12 +92,13 @@ class ProductSerializer(serializers.Serializer):
 
         # check negative values
         for field in numeric_fields:
-            if (data.get(field) or 0) < 0:
+            # check sent fields only
+            if get_field_value(field) < 0:
                 errors[field] = "Value cannot be negative"
 
         # check weight and volume
-        weight = data.get("weight") or 0
-        volume = data.get("volume") or 0
+        weight = get_field_value("weight")
+        volume = get_field_value("volume")
 
         # both null
         if not weight and not volume:
@@ -97,21 +110,21 @@ class ProductSerializer(serializers.Serializer):
 
         # check macro nutrients
         # check fat
-        fat = data.get("fat") or 0
-        saturated_fat = data.get("saturated_fat") or 0
+        fat = get_field_value("fat")
+        saturated_fat = get_field_value("saturated_fat")
 
         if saturated_fat > fat:
             errors["fat"] = errors["saturated_fat"] = "Saturated fat cannot be greater than total fat"
 
         # check carbs
-        carbohydrates = data.get("carbohydrates") or 0
-        sugars = data.get("sugars") or 0
+        carbohydrates = get_field_value("carbohydrates")
+        sugars = get_field_value("sugars")
 
         if sugars > carbohydrates:
             errors["carbohydrates"] = errors["sugars"] = "Sugar content cannot be greater than amount of carbohydrates"
 
         # check total amount of nutrients
-        total_nutrients = fat + carbohydrates + (data.get("protein") or 0) + (data.get("fiber") or 0) + (data.get("salt") or 0)
+        total_nutrients = fat + carbohydrates + get_field_value("protein") + get_field_value("fiber") + get_field_value("salt")
 
         # if liquid, nutrients limit is NUTRIENTS_LIQUID_LIMIT
         # if solid, nutrients the limit is NUTRIENTS_SOLID_LIMIT
@@ -130,3 +143,11 @@ class ProductSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         return Product.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        return instance
