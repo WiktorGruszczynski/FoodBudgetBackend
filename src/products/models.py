@@ -36,10 +36,8 @@ class Product(models.Model):
 
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
-    # Automatycznie ustawia datę tylko raz, przy utworzeniu obiektu
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # Automatycznie aktualizuje datę przy każdym wywołaniu .save()
     updated_at = models.DateTimeField(auto_now=True)
 
     # Pole, które dodaliśmy wcześniej - sterowane ręcznie w funkcji scan

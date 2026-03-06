@@ -11,6 +11,9 @@ class Recipe(models.Model):
     description = models.TextField()
     issued_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="recipes")
 
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return f"Recipe(id={self.id}, name={self.name})"
 
