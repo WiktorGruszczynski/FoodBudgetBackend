@@ -26,10 +26,7 @@ class HiddenSpectacularAPIView(SpectacularAPIView):
     pass
 
 
-api_urlpatterns = [
-    path("", include("users.urls")),
-    path("", include("products.urls")),
-]
+api_urlpatterns = [path("", include("users.urls")), path("", include("products.urls")), path("", include("recipes.urls"))]
 
 urlpatterns = [
     path("admin/", admin.site.urls),
