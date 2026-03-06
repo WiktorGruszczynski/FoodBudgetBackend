@@ -6,7 +6,7 @@ from django.db import models
 
 
 class QuantityUnit(models.TextChoices):
-    GRAM = ("g",)
+    GRAM = "g"
     MILLILITER = "ml"
 
 
@@ -33,6 +33,8 @@ class Product(models.Model):
     fiber = models.FloatField()
     protein = models.FloatField()
     salt = models.FloatField()
+
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     # Automatycznie ustawia datę tylko raz, przy utworzeniu obiektu
     created_at = models.DateTimeField(auto_now_add=True)
