@@ -12,7 +12,6 @@ from products.models import Product
 from products.serializers import ProductSerializer
 
 logger = logging.getLogger(__name__)
-SYNC_INTERVAL = timezone.now() - timedelta(days=1)
 
 
 @extend_schema(tags=["Products"])
