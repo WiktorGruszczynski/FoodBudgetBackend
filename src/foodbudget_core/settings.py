@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "users",
     "products",
+    "recipes",
 ]
 
 REST_FRAMEWORK = {
