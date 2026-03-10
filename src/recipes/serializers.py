@@ -35,6 +35,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
+        validated_data.pop("issued_by", None)
         ingredients_data = validated_data.pop("ingredients", None)
 
         for attr, value in validated_data.items():
