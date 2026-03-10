@@ -20,11 +20,35 @@ class IngredientSerializer(serializers.ModelSerializer):
 class RecipeSerializer(serializers.ModelSerializer):
     issued_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
     ingredients = IngredientSerializer(many=True)
+    nutrients = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
-        fields = ["id", "name", "description", "issued_by", "ingredients", "created_at", "updated_at"]
+        fields = ["id", "name", "description", "issued_by", "ingredients", "created_at", "updated_at", "nutrients"]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+    def get_nutrients(self, obj):
+        totals = {
+            "energy": 0,
+            "fat": 0,
+            "saturated_fat": 0,
+            "carbohydrates": 0,
+            "sugars": 0,
+            "fiber": 0,
+            "protein": 0,
+            "salt": 0,
+        }
+
+        for ingredient in obj.ingredients.select_related("product").all():
+            factor = ingredient.quantity / 100
+
+            for key in totals:
+                totals[key] += getattr(ingredient.product, key) * factor
+
+        for key in totals:
+            totals[key] = round(totals[key], 2)
+
+        return totals
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop("ingredients")

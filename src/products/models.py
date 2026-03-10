@@ -44,6 +44,14 @@ class Product(models.Model):
     # Pole, które dodaliśmy wcześniej - sterowane ręcznie w funkcji scan
     last_synced_at = models.DateTimeField(null=True, blank=True)
 
+    recipe = models.OneToOneField(
+        "recipes.Recipe",  # z jakim modelem tworzymy relacje
+        on_delete=models.SET_NULL,  # co robić gdy Recipe zostanie usunięty
+        null=True,  # allow null in db
+        blank=True,  # allow blank in forms/serializers
+        related_name="product",  # jak dostac sie do Product z Recipe -> recipe.product
+    )
+
     def __str__(self):
         data = {key: str(value) if key == "id" else value for key, value in self.__dict__.items() if not key.startswith("_")}
 
