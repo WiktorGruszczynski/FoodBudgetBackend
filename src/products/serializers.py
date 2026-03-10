@@ -28,6 +28,7 @@ class ProductSerializer(serializers.Serializer):
 
     quantity = serializers.DecimalField(max_digits=10, decimal_places=2, required=True, coerce_to_string=False)
     quantity_unit = serializers.ChoiceField(choices=QuantityUnit.choices, required=True)
+    nutrient_unit = serializers.ChoiceField(choices=QuantityUnit.choices, required=True)
 
     energy = serializers.DecimalField(max_digits=8, decimal_places=2, coerce_to_string=False)
 
@@ -101,10 +102,15 @@ class ProductSerializer(serializers.Serializer):
             if get_field_value(field) < 0:
                 errors[field] = "Value cannot be negative"
 
-        unit = data.get("quantity_unit") or (getattr(instance, "quantity_unit") if instance else None)
+        quantity_unit = data.get("quantity_unit") or (getattr(instance, "quantity_unit") if instance else None)
 
-        if not unit:
-            errors["unit"] = "Missing measurment unit"
+        if not quantity_unit:
+            errors["quantity_unit"] = "Missing quantity unit"
+
+        nutrient_unit = data.get("nutrient_unit") or (getattr(instance, "nutrient_unit") if instance else None)
+
+        if not nutrient_unit:
+            errors["nutrient_unit"] = "Missing nutrient unit"
 
         # check macro nutrients
         # check fat
@@ -126,13 +132,13 @@ class ProductSerializer(serializers.Serializer):
 
         # if liquid, nutrients limit is NUTRIENTS_LIQUID_LIMIT
         # if solid, nutrients the limit is NUTRIENTS_SOLID_LIMIT
-        is_liquid = unit in [QuantityUnit.MILLILITER]
+        is_liquid = nutrient_unit in [QuantityUnit.MILLILITER]
         nutrients_limit = NUTRIENTS_LIQUID_LIMIT if is_liquid else NUTRIENTS_SOLID_LIMIT
 
         if total_nutrients > nutrients_limit:
             errors["non_field_errors"] = (
                 f"Total nutrients ({total_nutrients}g) exceed the physical limit "
-                f"for a 100{unit} sample (limit: {nutrients_limit}g)."
+                f"for a 100{nutrient_unit} sample (limit: {nutrients_limit}g)."
             )
 
         if errors:

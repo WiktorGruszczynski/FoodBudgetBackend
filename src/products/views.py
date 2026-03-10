@@ -108,6 +108,7 @@ class ProductViewSet(BaseAuthViewSet):
                 "ean": ean,
                 "quantity": product_data.get("product_quantity"),
                 "quantity_unit": product_data.get("product_quantity_unit") or product_data.get("serving_quantity_unit"),
+                "nutrient_unit": product_data.get("product_quantity_unit") or product_data.get("serving_quantity_unit"),
                 "manufacturer": product_data.get("brands"),
                 "energy": nutriments.get("energy-kcal_100g"),
                 "fat": nutriments.get("fat_100g"),

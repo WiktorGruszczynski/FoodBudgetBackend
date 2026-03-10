@@ -20,7 +20,8 @@ class Product(models.Model):
 
     # uses either weight or volume
     quantity = models.FloatField()
-    unit = models.CharField(max_length=8, choices=QuantityUnit.choices)
+    quantity_unit = models.CharField(max_length=8, choices=QuantityUnit.choices)
+    nutrient_unit = models.CharField(max_length=8, choices=QuantityUnit.choices)
 
     # values below are in (grams) per 100g/100ml
 
