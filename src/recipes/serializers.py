@@ -1,16 +1,14 @@
-from products.serializers import ProductSerializer
 from rest_framework import serializers
 
 from recipes.models import Ingredient, Recipe
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)  # w response - obiekt
-    product_id = serializers.UUIDField(write_only=True)  # w request - UUID
+    product_id = serializers.UUIDField()
 
     class Meta:
         model = Ingredient
-        fields = ["id", "product", "product_id", "quantity", "unit"]
+        fields = ["id", "product_id", "quantity", "unit"]
         read_only_fields = ["id"]
 
     def validate_quantity(self, value):
@@ -21,9 +19,32 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class RecipeSerializer(serializers.ModelSerializer):
     issued_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    ingredients = IngredientSerializer(many=True, read_only=True)
+    ingredients = IngredientSerializer(many=True)
 
     class Meta:
         model = Recipe
         fields = ["id", "name", "description", "issued_by", "ingredients", "created_at", "updated_at"]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+    def create(self, validated_data):
+        ingredients_data = validated_data.pop("ingredients")
+        recipe = Recipe.objects.create(**validated_data)
+
+        Ingredient.objects.bulk_create([Ingredient(recipe=recipe, **ingredient) for ingredient in ingredients_data])
+
+        return recipe
+
+    def update(self, instance, validated_data):
+        ingredients_data = validated_data.pop("ingredients", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        if ingredients_data is not None:
+            instance.ingredients.all().delete()
+
+            Ingredient.objects.bulk_create([Ingredient(recipe=instance, **ingredient) for ingredient in ingredients_data])
+
+        return instance
