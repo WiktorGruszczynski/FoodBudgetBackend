@@ -1,15 +1,29 @@
+from products.models import QuantityUnit
 from rest_framework import serializers
 
 from recipes.models import Ingredient, Recipe
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    product_id = serializers.UUIDField()
+    product_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    subrecipe_id = serializers.UUIDField(required=False, allow_null=True, default=None)
 
     class Meta:
         model = Ingredient
-        fields = ["id", "product_id", "quantity", "unit"]
+        fields = ["id", "product_id", "subrecipe_id", "quantity", "unit"]
         read_only_fields = ["id"]
+
+    def validate(self, data):
+        product_id = data.get("product_id")
+        subrecipe_id = data.get("subrecipe_id")
+
+        if not product_id and not subrecipe_id:
+            raise serializers.ValidationError("provide either product_id or subrecipe_id")
+
+        if product_id and subrecipe_id:
+            raise serializers.ValidationError("provide either product_id or subrecipe_id, not both")
+
+        return data
 
     def validate_quantity(self, value):
         if value <= 0:
@@ -20,14 +34,33 @@ class IngredientSerializer(serializers.ModelSerializer):
 class RecipeSerializer(serializers.ModelSerializer):
     issued_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
     ingredients = IngredientSerializer(many=True)
-    nutrients = serializers.SerializerMethodField()
+    total_nutrients = serializers.SerializerMethodField()
+    quantity = serializers.SerializerMethodField()
+    quantity_unit = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
-        fields = ["id", "name", "description", "issued_by", "ingredients", "created_at", "updated_at", "nutrients"]
+        fields = [
+            "id",
+            "name",
+            "description",
+            "issued_by",
+            "quantity",
+            "quantity_unit",
+            "total_nutrients",
+            "ingredients",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
-    def get_nutrients(self, obj):
+    def get_quantity(self, obj):
+        return sum(ingredient.quantity for ingredient in obj.ingredients.all())
+
+    def get_quantity_unit(self, obj):
+        return QuantityUnit.GRAM
+
+    def get_total_nutrients(self, obj):
         totals = {
             "energy": 0,
             "fat": 0,
@@ -39,11 +72,20 @@ class RecipeSerializer(serializers.ModelSerializer):
             "salt": 0,
         }
 
-        for ingredient in obj.ingredients.select_related("product").all():
-            factor = ingredient.quantity / 100
+        for ingredient in obj.ingredients.select_related("product", "subrecipe").all():
+            if ingredient.product:
+                source_nutrients = {key: getattr(ingredient.product, key) for key in totals}
+                factor = ingredient.quantity / 100
+
+            elif ingredient.subrecipe:
+                source_nutrients = self.get_total_nutrients(ingredient.subrecipe)
+                factor = (100 / self.get_quantity(ingredient.subrecipe)) * (ingredient.quantity / 100)
+
+            else:
+                continue
 
             for key in totals:
-                totals[key] += getattr(ingredient.product, key) * factor
+                totals[key] += source_nutrients[key] * factor
 
         for key in totals:
             totals[key] = round(totals[key], 2)
