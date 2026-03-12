@@ -12,7 +12,7 @@ class QuantityUnit(models.TextChoices):
 
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=128, unique=True)
+    name = models.CharField(max_length=128)
     ean = models.CharField(max_length=13, unique=True, null=True, blank=True, default=None)
     manufacturer = models.CharField(max_length=128)
 
@@ -22,6 +22,7 @@ class Product(models.Model):
     quantity = models.FloatField()
     quantity_unit = models.CharField(max_length=8, choices=QuantityUnit.choices)
     nutrient_unit = models.CharField(max_length=8, choices=QuantityUnit.choices)
+    density = models.FloatField(null=True, blank=True)
 
     # values below are in (grams) per 100g/100ml
 

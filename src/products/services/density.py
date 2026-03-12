@@ -5,7 +5,7 @@ class DensityPreset:
     SYRUP = 1.35  # Honey, maple syrup, agave, molasses, balsamic vinegar/glaze
 
 
-def get_density_by_product_name(name: str) -> float:
+def get_density_by_product_name(name: str):
     name = name.lower()
 
     # Mapping: density -> list of keywords (in Polish)

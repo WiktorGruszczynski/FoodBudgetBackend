@@ -2,10 +2,13 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
 from products.models import Product, QuantityUnit
+from products.services import get_density_by_product_name
 
 # const values below are in grams
 NUTRIENTS_LIQUID_LIMIT = 140
 NUTRIENTS_SOLID_LIMIT = 100
+
+LIQUID_UNITS = [QuantityUnit.MILLILITER]
 
 
 class ProductSerializer(serializers.Serializer):
@@ -29,6 +32,7 @@ class ProductSerializer(serializers.Serializer):
     quantity = serializers.DecimalField(max_digits=10, decimal_places=2, required=True, coerce_to_string=False)
     quantity_unit = serializers.ChoiceField(choices=QuantityUnit.choices, required=True)
     nutrient_unit = serializers.ChoiceField(choices=QuantityUnit.choices, required=True)
+    density = serializers.DecimalField(max_digits=4, decimal_places=2, required=False, coerce_to_string=False)
 
     energy = serializers.DecimalField(max_digits=8, decimal_places=2, coerce_to_string=False)
 
@@ -132,7 +136,7 @@ class ProductSerializer(serializers.Serializer):
 
         # if liquid, nutrients limit is NUTRIENTS_LIQUID_LIMIT
         # if solid, nutrients the limit is NUTRIENTS_SOLID_LIMIT
-        is_liquid = nutrient_unit in [QuantityUnit.MILLILITER]
+        is_liquid = nutrient_unit in LIQUID_UNITS
         nutrients_limit = NUTRIENTS_LIQUID_LIMIT if is_liquid else NUTRIENTS_SOLID_LIMIT
 
         if total_nutrients > nutrients_limit:
@@ -146,7 +150,13 @@ class ProductSerializer(serializers.Serializer):
 
         return data
 
+    def _is_liquid(self, data):
+        return data.get("nutrient_unit") in LIQUID_UNITS
+
     def create(self, validated_data):
+        if self._is_liquid(validated_data):
+            validated_data["density"] = get_density_by_product_name(validated_data.get("name"))
+
         return Product.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
