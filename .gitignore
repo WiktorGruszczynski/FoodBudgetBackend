@@ -169,4 +169,4 @@ db.json
 .DS_Store
 
 # dev
-test.json
+.dev-testing
