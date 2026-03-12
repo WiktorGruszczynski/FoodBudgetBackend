@@ -41,9 +41,6 @@ class Product(models.Model):
 
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Pole, które dodaliśmy wcześniej - sterowane ręcznie w funkcji scan
-    last_synced_at = models.DateTimeField(null=True, blank=True)
-
     recipe = models.OneToOneField(
         "recipes.Recipe",  # z jakim modelem tworzymy relacje
         on_delete=models.SET_NULL,  # co robić gdy Recipe zostanie usunięty
