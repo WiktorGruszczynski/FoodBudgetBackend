@@ -1,4 +1,4 @@
-from products.models import QuantityUnit
+from foodbudget_core.services import DensityPreset, MeasurmentUnit, is_unit_liquid
 from rest_framework import serializers
 
 from recipes.models import Ingredient, Recipe
@@ -54,11 +54,18 @@ class RecipeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
+    # quantity by default in grams for recipes
     def get_quantity(self, obj):
-        return sum(ingredient.quantity for ingredient in obj.ingredients.all())
+        def callback(ingredient):
+            if ingredient.product_id is not None and is_unit_liquid(ingredient.unit) and ingredient.product.density:
+                return ingredient.product.density * ingredient.quantity
+
+            return ingredient.quantity
+
+        return sum(callback(ingredient) for ingredient in obj.ingredients.select_related("product").all())
 
     def get_quantity_unit(self, obj):
-        return QuantityUnit.GRAM
+        return MeasurmentUnit.GRAM
 
     def get_total_nutrients(self, obj):
         totals = {
@@ -76,6 +83,13 @@ class RecipeSerializer(serializers.ModelSerializer):
             if ingredient.product:
                 source_nutrients = {key: getattr(ingredient.product, key) for key in totals}
                 factor = ingredient.quantity / 100
+
+                # if the nutrient unit is liquid and ingredient unit is in liquid
+                # EXAMPLE
+                # Product(Soy sauce, nutrients per 100ml)
+                # Ingredient(Product, quantity in 'ml' units)
+                if is_unit_liquid(ingredient.product.nutrient_unit) and is_unit_liquid(ingredient.unit):
+                    factor *= ingredient.product.density or DensityPreset.STANDARD
 
             elif ingredient.subrecipe:
                 source_nutrients = self.get_total_nutrients(ingredient.subrecipe)

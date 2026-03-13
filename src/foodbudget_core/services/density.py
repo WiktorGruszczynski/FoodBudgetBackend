@@ -82,4 +82,4 @@ if __name__ == "__main__":
     print(f"Woda kokosowa: {get_density_by_product_name('Woda kokosowa')}")
     print(f"Olej rzepakowy: {get_density_by_product_name('Olej rzepakowy')} ")
     print(f"Ketchup łagodny: {get_density_by_product_name('Ketchup łagodny')}")
-    print(f"Sos czosnkowy: {get_density_by_product_name('Sos czosnkowy')}")
+    print(f"Sos sojowy: {get_density_by_product_name('Sos sojowy')}")

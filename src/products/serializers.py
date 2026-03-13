@@ -1,14 +1,12 @@
+from foodbudget_core.services import get_density_by_product_name, is_unit_liquid
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from products.models import Product, QuantityUnit
-from products.services import get_density_by_product_name
+from products.models import MeasurmentUnit, Product
 
 # const values below are in grams
 NUTRIENTS_LIQUID_LIMIT = 140
 NUTRIENTS_SOLID_LIMIT = 100
-
-LIQUID_UNITS = [QuantityUnit.MILLILITER]
 
 
 class ProductSerializer(serializers.Serializer):
@@ -30,8 +28,8 @@ class ProductSerializer(serializers.Serializer):
     issued_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     quantity = serializers.DecimalField(max_digits=10, decimal_places=2, required=True, coerce_to_string=False)
-    quantity_unit = serializers.ChoiceField(choices=QuantityUnit.choices, required=True)
-    nutrient_unit = serializers.ChoiceField(choices=QuantityUnit.choices, required=True)
+    quantity_unit = serializers.ChoiceField(choices=MeasurmentUnit.choices, required=True)
+    nutrient_unit = serializers.ChoiceField(choices=MeasurmentUnit.choices, required=True)
     density = serializers.DecimalField(max_digits=4, decimal_places=2, required=False, coerce_to_string=False)
 
     energy = serializers.DecimalField(max_digits=8, decimal_places=2, coerce_to_string=False)
@@ -136,8 +134,7 @@ class ProductSerializer(serializers.Serializer):
 
         # if liquid, nutrients limit is NUTRIENTS_LIQUID_LIMIT
         # if solid, nutrients the limit is NUTRIENTS_SOLID_LIMIT
-        is_liquid = nutrient_unit in LIQUID_UNITS
-        nutrients_limit = NUTRIENTS_LIQUID_LIMIT if is_liquid else NUTRIENTS_SOLID_LIMIT
+        nutrients_limit = NUTRIENTS_LIQUID_LIMIT if is_unit_liquid(nutrient_unit) else NUTRIENTS_SOLID_LIMIT
 
         if total_nutrients > nutrients_limit:
             errors["non_field_errors"] = (
@@ -149,9 +146,6 @@ class ProductSerializer(serializers.Serializer):
             raise serializers.ValidationError(errors)
 
         return data
-
-    def _is_liquid(self, data):
-        return data.get("nutrient_unit") in LIQUID_UNITS
 
     def create(self, validated_data):
         if self._is_liquid(validated_data):

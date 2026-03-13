@@ -2,7 +2,7 @@ import uuid
 
 from django.db import models
 from foodbudget_core import settings
-from products.models import Product, QuantityUnit
+from products.models import MeasurmentUnit, Product
 
 
 class Recipe(models.Model):
@@ -31,7 +31,7 @@ class Ingredient(models.Model):
 
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="ingredients")  # recipe using this ingredient
     quantity = models.FloatField()
-    unit = models.CharField(max_length=8, choices=QuantityUnit.choices)
+    unit = models.CharField(max_length=8, choices=MeasurmentUnit.choices)
 
     class Meta:
         constraints = [
