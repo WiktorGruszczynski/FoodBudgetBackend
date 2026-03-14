@@ -17,11 +17,8 @@ class IngredientSerializer(serializers.ModelSerializer):
         product_id = data.get("product_id")
         subrecipe_id = data.get("subrecipe_id")
 
-        if not product_id and not subrecipe_id:
+        if bool(product_id) == bool(subrecipe_id):
             raise serializers.ValidationError("provide either product_id or subrecipe_id")
-
-        if product_id and subrecipe_id:
-            raise serializers.ValidationError("provide either product_id or subrecipe_id, not both")
 
         return data
 
