@@ -1,7 +1,6 @@
 from drf_spectacular.utils import extend_schema
 from foodbudget_core.views import BaseAuthViewSet
-from rest_framework import permissions, status
-from rest_framework.response import Response
+from rest_framework import permissions
 
 from recipes.models import Recipe
 from recipes.serializers import RecipeSerializer
@@ -10,7 +9,7 @@ from recipes.serializers import RecipeSerializer
 class IsRecipeCreatorOrReadOnly(permissions.BasePermission):
     """
     Allow anyone to read recipe and use it.
-    Only creator can modify it.
+    Only creator can modify or delete it.
     """
 
     def has_object_permission(self, request, view, obj):
@@ -27,10 +26,3 @@ class RecipeViewSet(BaseAuthViewSet):
 
     def get_permissions(self):
         return [*super().get_permissions(), IsRecipeCreatorOrReadOnly()]
-
-    # Rest of the endpoints are implemented automatically or by the serializer
-    def destroy(self, request, *args, **kwargs):
-        recipe = self.get_object()
-        recipe.delete()
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
