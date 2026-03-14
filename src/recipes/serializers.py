@@ -30,7 +30,7 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class RecipeSerializer(serializers.ModelSerializer):
     issued_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    ingredients = IngredientSerializer(many=True)
+    ingredients = IngredientSerializer(many=True)  # many=True -> list of ingredients
     total_nutrients = serializers.SerializerMethodField()
     quantity = serializers.SerializerMethodField()
     quantity_unit = serializers.SerializerMethodField()
@@ -51,7 +51,12 @@ class RecipeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
-    # quantity by default in grams for recipes
+    def get_quantity_unit(self, obj):
+        return MeasurmentUnit.GRAM
+
+    # in response quantity is generated dynamically
+    # it serves as one source of truth
+    # even after modyfing ingredient list,
     def get_quantity(self, obj):
         def callback(ingredient):
             if ingredient.product_id is not None and is_unit_liquid(ingredient.unit) and ingredient.product.density:
@@ -60,9 +65,6 @@ class RecipeSerializer(serializers.ModelSerializer):
             return ingredient.quantity
 
         return sum(callback(ingredient) for ingredient in obj.ingredients.select_related("product").all())
-
-    def get_quantity_unit(self, obj):
-        return MeasurmentUnit.GRAM
 
     def get_total_nutrients(self, obj):
         totals = {
