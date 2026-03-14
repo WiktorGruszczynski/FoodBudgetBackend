@@ -64,7 +64,7 @@ class TestProductAPI:
         assert response.status_code == 201
 
         # is product data present
-        assert response.data["product"]["id"] is not None
+        assert response.data["id"] is not None
 
     def test_macro_exceed_limit_fails(self, api_client, authenticated_user):
         "Check if macro validation works (sum of macros cannot be grater than specified limit)"
@@ -75,7 +75,7 @@ class TestProductAPI:
 
         assert response.status_code == 400
 
-        assert "non_field_errors" in response.data["error"]
+        assert "non_field_errors" in response.data
 
     def test_fat_content_validation(self, api_client, authenticated_user):
         "Check if total fat >= saturated_fat"
@@ -85,8 +85,9 @@ class TestProductAPI:
         response = api_client.post(self.url, too_much_saturated_fat, format="json")
 
         assert response.status_code == 400
-        assert "fat" in response.data["error"]
-        assert "saturated_fat" in response.data["error"]
+
+        assert "fat" in response.data
+        assert "saturated_fat" in response.data
 
     def test_carbohydrates_content_validation(self, api_client, authenticated_user):
         "Check if total carbohydrates >= sugars"
@@ -97,8 +98,8 @@ class TestProductAPI:
 
         assert response.status_code == 400
 
-        assert "sugars" in response.data["error"]
-        assert "carbohydrates" in response.data["error"]
+        assert "sugars" in response.data
+        assert "carbohydrates" in response.data
 
     def test_nutrients_equality_success(self, api_client, authenticated_user):
         """Check if subproduct content is equal to product content"""
@@ -109,9 +110,10 @@ class TestProductAPI:
     def test_limit_adjust_for_liquids(self, api_client, authenticated_user):
         """Nutrients limit for liquids is higher"""
 
-        data = create_test_product(quantity_unit="ml", carbohydrates=90, fat=40, protein=3.5, fiber=0.5, salt=1)
+        data = create_test_product(nutrient_unit="ml", carbohydrates=90, fat=40, protein=3.5, fiber=0.5, salt=1)
 
         response = api_client.post(self.url, data, format="json")
+
         assert response.status_code == 201
 
     def test_invalid_quantity_unit(self, api_client, authenticated_user):
@@ -119,7 +121,7 @@ class TestProductAPI:
 
         response = api_client.post(self.url, data, format="json")
         assert response.status_code == 400
-        assert "quantity_unit" in response.data["error"]
+        assert "quantity_unit" in response.data
 
     def test_negative_components_addup_to_positive(self, api_client, authenticated_user):
         data = create_test_product(fat=150, protein=-100)

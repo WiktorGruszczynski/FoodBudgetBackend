@@ -12,7 +12,7 @@ class Product(models.Model):
     ean = models.CharField(max_length=13, unique=True, null=True, blank=True, default=None)
     manufacturer = models.CharField(max_length=128)
 
-    issued_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="products")
+    issued_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="products")
 
     # uses either weight or volume
     quantity = models.FloatField()

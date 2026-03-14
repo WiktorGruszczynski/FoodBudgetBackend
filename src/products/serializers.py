@@ -148,7 +148,7 @@ class ProductSerializer(serializers.Serializer):
         return data
 
     def create(self, validated_data):
-        if self._is_liquid(validated_data):
+        if is_unit_liquid(validated_data.get("nutrient_unit")):
             validated_data["density"] = get_density_by_product_name(validated_data.get("name"))
 
         return Product.objects.create(**validated_data)
