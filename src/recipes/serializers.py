@@ -55,7 +55,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         return MeasurmentUnit.GRAM
 
     # in response quantity is generated dynamically
-    # it serves as one source of truth
     # even after modyfing ingredient list,
     def get_quantity(self, obj):
         def callback(ingredient):
@@ -80,22 +79,18 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         for ingredient in obj.ingredients.select_related("product", "subrecipe").all():
             if ingredient.product:
+                density = DensityPreset.STANDARD
                 source_nutrients = {key: getattr(ingredient.product, key) for key in totals}
-                factor = ingredient.quantity / 100
 
                 # if the nutrient unit is liquid and ingredient unit is in liquid
-                # EXAMPLE
-                # Product(Soy sauce, nutrients per 100ml)
-                # Ingredient(Product, quantity in 'ml' units)
                 if is_unit_liquid(ingredient.product.nutrient_unit) and is_unit_liquid(ingredient.unit):
-                    factor *= ingredient.product.density or DensityPreset.STANDARD
+                    density = ingredient.product.density or DensityPreset.STANDARD
 
-            elif ingredient.subrecipe:
-                source_nutrients = self.get_total_nutrients(ingredient.subrecipe)
-                factor = (100 / self.get_quantity(ingredient.subrecipe)) * (ingredient.quantity / 100)
+                factor = (ingredient.quantity / 100) * density
 
             else:
-                continue
+                source_nutrients = self.get_total_nutrients(ingredient.subrecipe)
+                factor = (100 / self.get_quantity(ingredient.subrecipe)) * (ingredient.quantity / 100)
 
             for key in totals:
                 totals[key] += source_nutrients[key] * factor
