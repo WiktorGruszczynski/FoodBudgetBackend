@@ -1,110 +1,105 @@
-from foodbudget_core.services import DensityPreset, MeasurmentUnit, is_unit_liquid
+from foodbudget_core.services import DensityPreset, MeasurmentUnit, is_product_liquid, is_unit_liquid
+from products.models import Product
 from rest_framework import serializers
 
 from recipes.models import Ingredient, Recipe
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    product_id = serializers.UUIDField(required=False, allow_null=True, default=None)
-    subrecipe_id = serializers.UUIDField(required=False, allow_null=True, default=None)
-
     class Meta:
         model = Ingredient
-        fields = ["id", "product_id", "subrecipe_id", "quantity", "unit"]
+        fields = ["id", "product", "quantity", "unit"]
         read_only_fields = ["id"]
-
-    def validate(self, data):
-        product_id = data.get("product_id")
-        subrecipe_id = data.get("subrecipe_id")
-
-        if bool(product_id) == bool(subrecipe_id):
-            raise serializers.ValidationError("provide either product_id or subrecipe_id")
-
-        return data
 
     def validate_quantity(self, value):
         if value <= 0:
             raise serializers.ValidationError("Quantity must be greater than 0.")
         return value
 
+    def validate(self, data):
+        product = data.get("product")
+        ingredient_unit = data.get("unit")
+
+        # Prevent usage of liquid units for non-liquid products
+        if not is_product_liquid(product) and is_unit_liquid(ingredient_unit):
+            raise serializers.ValidationError({"unit": "Wrong unit"})
+
+        # Allow to use unit of mass if product has defined density
+        if is_product_liquid(product) and not is_unit_liquid(ingredient_unit) and not product.density:
+            raise serializers.ValidationError({"unit": "Wrong unit"})
+
+        return data
+
 
 class RecipeSerializer(serializers.ModelSerializer):
+    """
+    Creating new Recipe object also creates new Product.
+    Generally Recipe object is just a description with a list of ingredients.
+    """
+
     issued_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
     ingredients = IngredientSerializer(many=True)  # many=True -> list of ingredients
-    total_nutrients = serializers.SerializerMethodField()
-    quantity = serializers.SerializerMethodField()
-    quantity_unit = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
-        fields = [
-            "id",
-            "name",
-            "description",
-            "issued_by",
-            "quantity",
-            "quantity_unit",
-            "total_nutrients",
-            "ingredients",
-            "created_at",
-            "updated_at",
-        ]
+        fields = "__all__"
         read_only_fields = ["id", "created_at", "updated_at"]
 
-    def get_quantity_unit(self, obj):
-        return MeasurmentUnit.GRAM
+    def _get_ingredient_density(self, ingredient):
+        if is_unit_liquid(ingredient.unit) and ingredient.product.density:
+            return ingredient.product.density
 
-    # in response quantity is generated dynamically
-    # even after modyfing ingredient list,
-    def get_quantity(self, obj):
-        def callback(ingredient):
-            if ingredient.product_id is not None and is_unit_liquid(ingredient.unit) and ingredient.product.density:
-                return ingredient.product.density * ingredient.quantity
+        return DensityPreset.STANDARD
 
-            return ingredient.quantity
-
-        return sum(callback(ingredient) for ingredient in obj.ingredients.select_related("product").all())
-
-    def get_total_nutrients(self, obj):
-        totals = {
-            "energy": 0,
-            "fat": 0,
-            "saturated_fat": 0,
-            "carbohydrates": 0,
-            "sugars": 0,
-            "fiber": 0,
-            "protein": 0,
-            "salt": 0,
+    def _make_product_from_recipe(self, recipe: Recipe):
+        total_mass = 0.0
+        nutrients = {
+            key: 0.0 for key in ["energy_kcal", "fat", "saturated_fat", "carbohydrates", "sugars", "protein", "fiber", "salt"]
         }
 
-        for ingredient in obj.ingredients.select_related("product", "subrecipe").all():
-            if ingredient.product:
-                density = DensityPreset.STANDARD
-                source_nutrients = {key: getattr(ingredient.product, key) for key in totals}
+        for ingredient in recipe.ingredients.select_related("product").all():
+            product = ingredient.product
+            density = product.density or DensityPreset.STANDARD
 
-                # if the nutrient unit is liquid and ingredient unit is in liquid
-                if is_unit_liquid(ingredient.product.nutrient_unit) and is_unit_liquid(ingredient.unit):
-                    density = ingredient.product.density or DensityPreset.STANDARD
-
-                factor = (ingredient.quantity / 100) * density
-
+            if is_unit_liquid(ingredient.unit):
+                ingredient_mass = ingredient.quantity * density
+                ingredient_volume = ingredient.quantity
             else:
-                source_nutrients = self.get_total_nutrients(ingredient.subrecipe)
-                factor = (100 / self.get_quantity(ingredient.subrecipe)) * (ingredient.quantity / 100)
+                ingredient_mass = ingredient.quantity
+                ingredient_volume = ingredient.quantity / density
 
-            for key in totals:
-                totals[key] += source_nutrients[key] * factor
+            total_mass += ingredient_mass
 
-        for key in totals:
-            totals[key] = round(totals[key], 2)
+            factor = ingredient_volume / 100.0 if is_unit_liquid(product.nutrient_unit) else ingredient_mass / 100.0
 
-        return totals
+            for nutrient_name in nutrients:
+                val_per_100 = getattr(product, nutrient_name) or 0
+                nutrients[nutrient_name] += float(val_per_100) * factor
+
+        if total_mass == 0:
+            raise serializers.ValidationError("Invalid ingredients")
+
+        product_data = {
+            "quantity": round(total_mass, 2),
+            "quantity_unit": MeasurmentUnit.GRAM,
+            "nutrient_unit": MeasurmentUnit.GRAM,
+            "name": recipe.name,
+        }
+
+        for nutrient_name in nutrients:
+            product_data[nutrient_name] = round((nutrients[nutrient_name] / total_mass) * 100, 2)
+
+        product, created = Product.objects.update_or_create(recipe=recipe, defaults=product_data)
+
+        return product
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop("ingredients")
-        recipe = Recipe.objects.create(**validated_data)
 
+        recipe = Recipe.objects.create(**validated_data)
         Ingredient.objects.bulk_create([Ingredient(recipe=recipe, **ingredient) for ingredient in ingredients_data])
+
+        self._make_product_from_recipe(recipe)
 
         return recipe
 
@@ -115,11 +110,12 @@ class RecipeSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-        instance.save()
-
         if ingredients_data is not None:
             instance.ingredients.all().delete()
-
             Ingredient.objects.bulk_create([Ingredient(recipe=instance, **ingredient) for ingredient in ingredients_data])
+
+        instance.save()
+
+        self._make_product_from_recipe(instance)
 
         return instance

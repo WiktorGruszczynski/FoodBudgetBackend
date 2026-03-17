@@ -63,7 +63,9 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
     ],
+    "COERCE_DECIMAL_TO_STRING": False,
 }
+
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

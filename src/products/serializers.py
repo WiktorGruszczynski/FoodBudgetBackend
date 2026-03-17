@@ -1,76 +1,51 @@
-from foodbudget_core.services import get_density_by_product_name, is_unit_liquid
+from foodbudget_core.services import get_density_by_product_name, is_ean_valid, is_unit_liquid, normalize_ean
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
 
-from products.models import MeasurmentUnit, Product
+from products.models import Product
 
 
-class ProductSerializer(serializers.Serializer):
-    id = serializers.UUIDField(read_only=True)
-
-    name = serializers.CharField(
-        max_length=128,
-        validators=[UniqueValidator(queryset=Product.objects.all(), message="Product with this name already exists.")],
-    )
-
-    ean = serializers.CharField(
-        required=False,
-        allow_null=True,
-        allow_blank=True,
-        validators=[UniqueValidator(queryset=Product.objects.all(), message="Product with this ean already exists.")],
-    )
-    manufacturer = serializers.CharField(required=False, max_length=128)
-
+class ProductSerializer(serializers.ModelSerializer):
     issued_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    density = serializers.FloatField(read_only=True)
 
-    quantity = serializers.DecimalField(max_digits=10, decimal_places=2, required=True, coerce_to_string=False)
-    quantity_unit = serializers.ChoiceField(choices=MeasurmentUnit.choices, required=True)
-    nutrient_unit = serializers.ChoiceField(choices=MeasurmentUnit.choices, required=True)
-    density = serializers.DecimalField(max_digits=4, decimal_places=2, required=False, coerce_to_string=False)
-
-    energy = serializers.DecimalField(max_digits=8, decimal_places=2, coerce_to_string=False)
-
-    fat = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False)
-    saturated_fat = serializers.DecimalField(
-        max_digits=6, decimal_places=2, coerce_to_string=False, allow_null=True, required=False
-    )
-
-    carbohydrates = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False)
-    sugars = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False, allow_null=True, required=False)
-
-    fiber = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False)
-    protein = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False)
-    salt = serializers.DecimalField(max_digits=6, decimal_places=2, coerce_to_string=False, allow_null=True, required=False)
-
-    created_at = serializers.DateTimeField(read_only=True)
-    updated_at = serializers.DateTimeField(read_only=True)
-    last_synced_at = serializers.DateTimeField(read_only=True)
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "name",
+            "ean",
+            "manufacturer",
+            "issued_by",
+            "recipe",
+            "quantity",
+            "quantity_unit",
+            "nutrient_unit",
+            "density",
+            "energy_kcal",
+            "fat",
+            "saturated_fat",
+            "carbohydrates",
+            "sugars",
+            "fiber",
+            "protein",
+            "salt",
+            "price",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
     def validate_ean(self, value):
-        if value is not None and str(value).strip() == "":
+        if not value or not str(value).strip():
             return None
 
-        if not value:
-            return value
-
-        # remove blanks
-        value = "".join(value.split())
-
-        if not value.isdigit() or len(value) != 13:
-            raise serializers.ValidationError("EAN-13 must consist of exactly 13 digits")
-
-        digits = [int(d) for d in value]
-        checksum = sum(d * (3 if i % 2 else 1) for i, d in enumerate(digits[:-1]))
-        check_digit = (10 - (checksum % 10)) % 10
-
-        if check_digit != digits[-1]:
-            raise serializers.ValidationError(f"Invalid EAN checksum. Expected {check_digit} at the end.")
+        if not is_ean_valid(normalize_ean(value)):
+            raise serializers.ValidationError("Invalid EAN code")
 
         return value
 
     def validate(self, data):
         errors = {}
-
         instance = getattr(self, "instance", None)
 
         def get_field_value(field_name):
@@ -84,7 +59,7 @@ class ProductSerializer(serializers.Serializer):
 
         numeric_fields = [
             "quantity",
-            "energy",
+            "energy_kcal",
             "fat",
             "saturated_fat",
             "carbohydrates",
@@ -130,6 +105,9 @@ class ProductSerializer(serializers.Serializer):
 
         return data
 
+    def _has_recipe(self, instance: Product):
+        return instance.recipe is not None
+
     def create(self, validated_data):
         if is_unit_liquid(validated_data.get("nutrient_unit")):
             validated_data["density"] = get_density_by_product_name(validated_data.get("name"))
@@ -137,6 +115,9 @@ class ProductSerializer(serializers.Serializer):
         return Product.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
+        if self._has_recipe(instance):
+            raise serializers.ValidationError({"error": "This product has a recipe assigned to it"})
+
         fields_to_update = []
 
         for attr, value in validated_data.items():
