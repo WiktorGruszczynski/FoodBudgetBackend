@@ -1,10 +1,13 @@
 from foodbudget_core.services import is_product_liquid, is_unit_liquid
+from products.serializers import ProductSerializer
 from rest_framework import serializers
 
 from recipes.models import Ingredient, Recipe
 
 
 class IngredientSerializer(serializers.ModelSerializer):
+    product = ProductSerializer()
+
     class Meta:
         model = Ingredient
         fields = ["id", "product", "quantity", "unit"]
