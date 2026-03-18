@@ -10,3 +10,12 @@ class ProductViewSet(BaseAuthViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     lookup_field = "id"
+
+    def get_queryset(self):
+        queryset = Product.objects.all()
+        query = self.request.query_params.get("query")
+
+        if query is not None and len(query) >= 3:
+            queryset = queryset.filter(name__icontains=query)
+
+        return queryset
