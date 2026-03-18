@@ -16,7 +16,7 @@ class MealType(models.TextChoices):
 
 class Meal(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    issued_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="meals")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="meals")
     date = models.DateField()
     meal_type = models.CharField(max_length=16, choices=MealType.choices)
 
