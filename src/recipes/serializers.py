@@ -41,7 +41,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = "__all__"
+        fields = ["id", "name", "description", "ingredients", "issued_by"]
         read_only_fields = ["id", "created_at", "updated_at"]
 
     def create(self, validated_data):
@@ -66,7 +66,6 @@ class RecipeSerializer(serializers.ModelSerializer):
             Ingredient.objects.bulk_create([Ingredient(recipe=instance, **ingredient) for ingredient in ingredients_data])
 
         instance.save()
-
         instance.recalculate_product()
 
         return instance

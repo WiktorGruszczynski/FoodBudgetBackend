@@ -28,5 +28,3 @@ def on_product_updated(sender, instance, **kwargs):
                 recipe.recalculate_product()
 
     transaction.on_commit(do_recalculation)
-
-    print("\n\n")

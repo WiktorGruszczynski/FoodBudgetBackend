@@ -25,6 +25,7 @@ class Recipe(models.Model):
         """
         from products.models import Product  # Import wewnątrz, aby uniknąć pętli importów
 
+        total_price = 0.0
         total_mass = 0.0
         nutrients = {
             key: 0.0 for key in ["energy_kcal", "fat", "saturated_fat", "carbohydrates", "sugars", "protein", "fiber", "salt"]
@@ -35,15 +36,23 @@ class Recipe(models.Model):
 
         for ingredient in ingredients:
             product = ingredient.product
+            product_price = float(product.price)
             density = product.density or DensityPreset.STANDARD
 
             if is_unit_liquid(ingredient.unit):
                 ingredient_mass = ingredient.quantity * density
                 ingredient_volume = ingredient.quantity
+
             else:
                 ingredient_mass = ingredient.quantity
                 ingredient_volume = ingredient.quantity / density
 
+            if is_unit_liquid(product.quantity):
+                price_per_gram = (1.0 / product.quantity) * product_price / density
+            else:
+                price_per_gram = (1.0 / product.quantity) * product_price
+
+            total_price += ingredient_mass * price_per_gram
             total_mass += ingredient_mass
 
             # Sprawdzamy jednostkę miary nutrient_unit w produkcie-składniku
@@ -62,6 +71,7 @@ class Recipe(models.Model):
             "nutrient_unit": MeasurmentUnit.GRAM,
             "name": self.name,
             "issued_by": self.issued_by,
+            "price": total_price,
         }
 
         for nutrient_name in nutrients:
